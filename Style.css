@@ -376,3 +376,20 @@ footer {
         grid-template-columns: 1fr; /* Stack skills vertically on mobile */
     }
 }
+
+/* Remove/hide rotating or decorative boxes around hero section */
+/* Targets common class/id names and pseudo-elements used for ornaments */
+.hero::before,
+.hero::after,
+.hero .rotating-box,
+.hero .rotator,
+.hero .decor-box,
+.hero .ring,
+.hero .outline,
+[hero-ornament],
+.hero [class*="ornament"],
+.hero [class*="decor"] {
+    display: none !important;
+    animation: none !important;
+    transition: none !important;
+}
