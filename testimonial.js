@@ -1,86 +1,71 @@
 (function () {
-    const testimonials = [
-        { text: "Kursus ini membuat saya lebih percaya diri berbicara Inggris. Metode pengajarannya sangat mudah dipahami.", author: "Siti, Jakarta" },
-        { text: "Materinya terstruktur sesuai level. Dalam 3 bulan saya sudah bisa percakapan dasar dengan lancar.", author: "Budi, Bandung" },
-        { text: "Pengajar ramah dan sabar. Latihan speaking-nya efektif banget.", author: "Rina, Surabaya" },
-        { text: "Harga terjangkau untuk kualitas seperti ini. Recommended!", author: "Ahmad, Medan" }
-    ];
-
-    const container = document.querySelector('#testimoni .container');
+    const container = document.querySelector('#testimoni .testimonials-container');
     if (!container) return;
 
-    // Build wrapper + table
-    const wrapper = document.createElement('div');
-    wrapper.className = 'testimonial-table-wrapper';
-    const table = document.createElement('table');
-    table.className = 'testimonial-table';
-    const tr = document.createElement('tr');
+    const existingGrid = container.querySelector('.testimonial-grid');
+    if (!existingGrid) return;
 
-    testimonials.forEach(t => {
-        const td = document.createElement('td');
-        td.className = 'testimonial-cell';
-        td.innerHTML = `
-            <div class="testimonial-item neon-box" style="margin:0;">
-                <p>${t.text}</p>
-                <div class="testimonial-author">— ${t.author}</div>
-            </div>
-        `;
-        tr.appendChild(td);
-    });
+    // collect cards and remove original grid
+    const cards = Array.from(existingGrid.children).map(c => c.cloneNode(true));
+    existingGrid.remove();
 
-    // Duplicate cells to allow seamless looping
-    Array.from(tr.children).forEach(child => tr.appendChild(child.cloneNode(true)));
+    // build slider + track
+    const slider = document.createElement('div');
+    slider.className = 'testimonial-slider';
+    const track = document.createElement('div');
+    track.className = 'testimonial-track';
 
-    table.appendChild(tr);
-    wrapper.appendChild(table);
-    container.appendChild(wrapper);
+    // append two copies for seamless loop
+    cards.forEach(c => track.appendChild(c.cloneNode(true)));
+    cards.forEach(c => track.appendChild(c.cloneNode(true)));
 
-    // Inject minimal CSS for table layout and smooth appearance
+    slider.appendChild(track);
+    container.appendChild(slider);
+
+    // inject CSS for slider/track
     const style = document.createElement('style');
     style.textContent = `
-        .testimonial-table-wrapper { width:100%; overflow:hidden; position:relative; }
-        .testimonial-table { border-collapse:collapse; white-space:nowrap; display:inline-block; will-change:transform; }
-        .testimonial-table tr { display:flex; align-items:stretch; }
-        .testimonial-cell { display:inline-block; vertical-align:top; padding:0 12px; }
-        .testimonial-item { min-width:320px; max-width:420px; box-sizing:border-box; }
-        @media (max-width:768px) {
-            .testimonial-item { min-width:260px; max-width:320px; }
-        }
+        .testimonial-slider { width:100%; overflow:hidden; position:relative; padding: 12px 0; }
+        .testimonial-track { display:flex; gap:24px; align-items:stretch; will-change: transform; }
+        .testimonial-track .testimonial-card { flex: 0 0 auto; }
+        @media (max-width:767px) { .testimonial-track { gap:12px; } .testimonial-track .testimonial-card { width: calc(100% - 48px); max-width: 420px; } }
+        @media (prefers-reduced-motion: reduce) { .testimonial-track { animation: none !important; } }
     `;
     document.head.appendChild(style);
 
-    // Animation: constant-speed leftward sliding, seamless loop
-    let speed = 25; // px per second (slow)
+    // animation loop (left -> right). uses pixels/sec speed
+    let speed = 40; // px per second (adjustable)
+    let pos = 0;
+    let singleWidth = 0;
+    let last = performance.now();
     let paused = false;
-    let last = null;
-    let offset = 0;
 
     function recalc() {
-        // width of one sequence (half of full table because we duplicated)
-        const fullW = table.getBoundingClientRect().width;
-        const singleW = fullW / 2 || 1;
-        return { fullW, singleW };
+        // total track width / 2 = width of one set
+        singleWidth = track.scrollWidth / 2 || 0;
+        // start from -singleWidth so first visible set scrolls into view left->right
+        pos = -singleWidth;
+        track.style.transform = `translateX(${pos}px)`;
     }
 
-    let sizes = recalc();
-    window.addEventListener('resize', () => { sizes = recalc(); });
-
-    wrapper.addEventListener('mouseenter', () => { paused = true; });
-    wrapper.addEventListener('mouseleave', () => { paused = false; last = null; requestAnimationFrame(loop); });
-
-    function loop(ts) {
-        if (!last) last = ts;
-        const delta = ts - last;
-        last = ts;
-        if (!paused && sizes.singleW > 0 && sizes.fullW > wrapper.clientWidth) {
-            offset += (speed * delta) / 1000;
-            if (offset >= sizes.singleW) offset = offset - sizes.singleW;
-            table.style.transform = `translateX(${-offset}px)`;
-        }
-        requestAnimationFrame(loop);
+    // continuous animation: move right (increase pos). when reaches 0, reset to -singleWidth
+    function tick(now) {
+        if (paused) { last = now; requestAnimationFrame(tick); return; }
+        const dt = Math.max(0, now - last) / 1000;
+        last = now;
+        pos += speed * dt;
+        if (pos >= 0) pos = -singleWidth + (pos - 0); // wrap smoothly
+        track.style.transform = `translateX(${pos}px)`;
+        requestAnimationFrame(tick);
     }
 
-    // Start only if content bigger than wrapper (otherwise keep static)
-    sizes = recalc();
-    requestAnimationFrame(loop);
+    // pause on hover
+    slider.addEventListener('mouseenter', () => paused = true);
+    slider.addEventListener('mouseleave', () => paused = false);
+
+    // recalc on load/resize
+    window.addEventListener('load', () => { recalc(); last = performance.now(); requestAnimationFrame(tick); });
+    window.addEventListener('resize', () => { recalc(); });
+    // initial calc
+    recalc();
 })();
