@@ -53,12 +53,10 @@
     document.head.appendChild(style);
 
     // animation loop (left -> right). uses pixels/sec speed
-    let speed = 80; // px per second (dipercepat dari 40)
+    let speed = 140; // px per second (dipercepat)
     let pos = 0;
     let singleWidth = 0;
     let last = performance.now();
-    let paused = false;
-    let autoplay = true;
 
     function recalc() {
         // total track width / 2 = width of one set
@@ -68,33 +66,35 @@
         track.style.transform = `translateX(${pos}px)`;
     }
 
-    // continuous animation: move right (increase pos). when reaches 0, reset to -singleWidth
+    function wrapPos(p) {
+        if (!singleWidth) return p;
+        while (p >= 0) p -= singleWidth;
+        while (p < -singleWidth) p += singleWidth;
+        return p;
+    }
+
+    // continuous animation: move right (increase pos) and wrap endlessly
     function tick(now) {
-        if (paused || !autoplay) { last = now; requestAnimationFrame(tick); return; }
         const dt = Math.max(0, now - last) / 1000;
         last = now;
         pos += speed * dt;
-        if (pos >= 0) pos = -singleWidth + (pos - 0); // wrap smoothly
+        pos = wrapPos(pos);
         track.style.transform = `translateX(${pos}px)`;
         requestAnimationFrame(tick);
     }
 
-    // button handlers
+    // button handlers (tidak menghentikan animasi)
     prevBtn.addEventListener('click', () => {
-        autoplay = false;
         pos -= singleWidth / cards.length;
+        pos = wrapPos(pos);
         track.style.transform = `translateX(${pos}px)`;
     });
 
     nextBtn.addEventListener('click', () => {
-        autoplay = false;
         pos += singleWidth / cards.length;
+        pos = wrapPos(pos);
         track.style.transform = `translateX(${pos}px)`;
     });
-
-    // pause on hover
-    slider.addEventListener('mouseenter', () => paused = true);
-    slider.addEventListener('mouseleave', () => { paused = false; autoplay = true; });
 
     // recalc on load/resize
     window.addEventListener('load', () => { recalc(); last = performance.now(); requestAnimationFrame(tick); });
