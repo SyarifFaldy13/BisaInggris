@@ -748,9 +748,52 @@
             .about-box { animation: none !important; transition: none !important; }
             .about-box:hover { transform: none; }
         }
+
+        /* glow box for hero */
+        .glow-box { position: relative; display: inline-block; padding: 8px 18px; border-radius: 12px; z-index: 2; }
+        .glow-box .glow-rect {
+            position: absolute;
+            inset: -14px;
+            border-radius: 14px;
+            pointer-events: none;
+            border: 2px solid rgba(0,255,255,0.12);
+            box-shadow: 0 0 8px rgba(0,255,255,0.12);
+            opacity: 0;
+            transform: scale(0.98);
+            transition: opacity 260ms ease, transform 260ms ease;
+            will-change: opacity, transform;
+            background: linear-gradient(90deg, rgba(0,255,255,0.02), transparent);
+            mix-blend-mode: screen;
+        }
+        .glow-box.in-view .glow-rect {
+            opacity: 1;
+            transform: scale(1);
+            animation: glow-pulse 2.6s ease-in-out infinite, sweep-border 3.2s linear infinite;
+        }
+        @keyframes glow-pulse {
+            0% { box-shadow: 0 0 6px rgba(0,255,255,0.18); }
+            50% { box-shadow: 0 0 28px rgba(0,255,255,0.85); }
+            100% { box-shadow: 0 0 6px rgba(0,255,255,0.18); }
+        }
+        /* subtle moving highlight around the border */
+        .glow-box .glow-rect::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            background: conic-gradient(from 0deg, rgba(0,255,255,0.0), rgba(0,255,255,0.55), rgba(0,255,255,0.0));
+            mask: linear-gradient(#000 50%, transparent 51%);
+            opacity: 0.9;
+            transform: rotate(0deg);
+            transition: transform 200ms linear;
+        }
+        @keyframes sweep-border {
+            from { transform: rotate(0deg); filter: hue-rotate(0deg); }
+            to   { transform: rotate(360deg); filter: hue-rotate(20deg); }
+        }
     </style>
-</head>
-<body>
+    </head>
+    <body>
     <!-- Header -->
     <header>
         <div class="container header-container">
@@ -773,14 +816,17 @@
     <!-- Hero Section -->
     <section id="beranda" class="hero">
         <div class="container">
-            <h1 class="glitch-text" data-text="KUASAI BAHASA INGGRIS">KUASAI BAHASA INGGRIS</h1>
-            <p>BELAJAR SESUAI LEVEL KEMAMPUANMU – DARI PEMULA SAMPAI MAHIR!</p>
-            <div class="hero-buttons">
-                <a href="#kontak" class="btn btn-primary">DAFTAR GRATIS SEKARANG</a>
-                <a href="#program" class="btn btn-secondary">LIHAT KURIKULUM</a>
+            <div class="glow-box" id="heroGlow">
+                <h1 class="glitch-text" data-text="KUASAI BAHASA INGGRIS">KUASAI BAHASA INGGRIS</h1>
+                <span class="glow-rect" aria-hidden="true"></span>
             </div>
-        </div>
-    </section>
+             <p>BELAJAR SESUAI LEVEL KEMAMPUANMU – DARI PEMULA SAMPAI MAHIR!</p>
+             <div class="hero-buttons">
+                 <a href="#kontak" class="btn btn-primary">DAFTAR GRATIS SEKARANG</a>
+                 <a href="#program" class="btn btn-secondary">LIHAT KURIKULUM</a>
+             </div>
+         </div>
+     </section>
 
     <!-- Programs Section -->
     <section id="program" class="section">
@@ -1161,6 +1207,21 @@
     <!-- Load scripts (fixed) -->
     <script src="script.js"></script>
     <script src="testimonial.js"></script>
+    <script>
+    // observe hero visibility and toggle glow
+    (function(){
+        const hero = document.querySelector('#beranda');
+        const box = document.querySelector('#heroGlow');
+        if (!hero || !box) return;
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) box.classList.add('in-view');
+                else box.classList.remove('in-view');
+            });
+        }, { threshold: 0.45 });
+        io.observe(hero);
+    })();
+    </script>
 </body>
 </html>
 
