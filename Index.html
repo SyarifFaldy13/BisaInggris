@@ -683,6 +683,71 @@
             .testimonial-grid { gap: 12px; }
             .testimonial-grid .testimonial-card { width: 100%; max-width: 420px; }
         }
+        /* About box: neat card with subtle cyan neon glow */
+        .about-box {
+            background: linear-gradient(180deg, rgba(5,10,10,0.65), rgba(0,0,0,0.55));
+            border-radius: 14px;
+            padding: 28px;
+            border: 1px solid rgba(0, 255, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,255,255,0.03);
+            transition: box-shadow 360ms ease, transform 360ms ease;
+        }
+
+        .about-box::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            left: -30%;
+            width: 160%;
+            height: 160%;
+            background: radial-gradient(circle at 20% 20%, rgba(0,255,255,0.12), transparent 12%),
+                        radial-gradient(circle at 80% 80%, rgba(0,200,200,0.08), transparent 12%);
+            filter: blur(14px);
+            opacity: 0.2;
+            transform: translateZ(0);
+            animation: neon-pulse 3.2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .about-box::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            padding: 1px;
+            background: linear-gradient(90deg, rgba(0,255,255,0.06), rgba(0,200,200,0.03));
+            mix-blend-mode: screen;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .about-content {
+            position: relative;
+            z-index: 2;
+            color: var(--text-secondary);
+            line-height: 1.9;
+            font-size: 1.05rem;
+        }
+
+        .about-box:hover {
+            box-shadow: 0 20px 60px rgba(0,255,255,0.10);
+            transform: translateY(-4px);
+        }
+
+        @keyframes neon-pulse {
+            0% { opacity: 0.18; transform: scale(1) translateY(0); }
+            50% { opacity: 0.34; transform: scale(1.02) translateY(-2px); }
+            100% { opacity: 0.18; transform: scale(1) translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .about-box::before,
+            .about-box { animation: none !important; transition: none !important; }
+            .about-box:hover { transform: none; }
+        }
     </style>
 </head>
 <body>
@@ -1095,7 +1160,7 @@
 
     <!-- Load scripts (fixed) -->
     <script src="script.js"></script>
-    <script src="hero-glow.js"></script>
+    <script src="testimonial.js"></script>
 </body>
 </html>
 
