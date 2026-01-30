@@ -78,9 +78,20 @@
             transform: none;
         }
 
+        /* Motion blur effect during scrolling */
+        body.scrolling {
+            filter: blur(2px);
+            transition: filter 0.3s ease-in-out;
+        }
+        body.scrolling-done {
+            filter: none;
+            transition: filter 0.3s ease-in-out;
+        }
+
         /* Respect reduced motion */
         @media (prefers-reduced-motion: reduce) {
             section { transition: none !important; transform: none !important; opacity: 1 !important; }
+            body.scrolling, body.scrolling-done { filter: none !important; transition: none !important; }
         }
     `;
     document.head.appendChild(style);
@@ -121,10 +132,14 @@
         function scrollToSection(index) {
             if (index < 0 || index >= sections.length || isScrolling) return;
             isScrolling = true;
+            document.body.classList.add('scrolling'); // Add motion blur
             const target = sections[index];
             const offset = target.getBoundingClientRect().top + window.scrollY - getHeaderOffset() - 12;
             smoothScrollTo(offset, 800).then(() => {
                 isScrolling = false;
+                document.body.classList.remove('scrolling');
+                document.body.classList.add('scrolling-done'); // Smooth transition back
+                setTimeout(() => document.body.classList.remove('scrolling-done'), 300); // Remove after transition
                 // Update URL hash
                 const id = target.id;
                 if (id) history.replaceState(null, '', `#${id}`);
