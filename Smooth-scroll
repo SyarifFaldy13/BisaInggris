@@ -1,0 +1,165 @@
+(function () {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const header = document.querySelector('header');
+
+    function getHeaderOffset() {
+        return header ? header.offsetHeight : 0;
+    }
+
+    // Easing (easeInOutCubic)
+    function ease(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function smoothScrollTo(targetY, duration = 700) {
+        if (prefersReduced) {
+            window.scrollTo(0, targetY);
+            return Promise.resolve();
+        }
+        const startY = window.scrollY || window.pageYOffset;
+        const diff = targetY - startY;
+        let startTime = null;
+        return new Promise((resolve) => {
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const t = Math.min(1, elapsed / duration);
+                const v = ease(t);
+                window.scrollTo(0, Math.round(startY + diff * v));
+                if (elapsed < duration) requestAnimationFrame(step);
+                else resolve();
+            }
+            requestAnimationFrame(step);
+        });
+    }
+
+    // Intercept in-page links and animate
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', (e) => {
+            const href = a.getAttribute('href');
+            if (!href || href === '#') return;
+            const target = document.querySelector(href);
+            if (!target) return;
+            e.preventDefault();
+            const offset = target.getBoundingClientRect().top + window.scrollY - getHeaderOffset() - 12;
+            smoothScrollTo(offset).then(() => {
+                history.pushState(null, '', href);
+            });
+        });
+    });
+
+    // Smooth scroll on initial load if there's a hash
+    window.addEventListener('load', () => {
+        if (location.hash) {
+            const target = document.querySelector(location.hash);
+            if (target) {
+                const offset = target.getBoundingClientRect().top + window.scrollY - getHeaderOffset() - 12;
+                // slight delay so layout & header measurements settle
+                setTimeout(() => smoothScrollTo(offset), 60);
+            }
+        }
+    });
+
+    // Inject section animation CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        /* ensure JS controlled smoothness (no native jump) */
+        html { scroll-behavior: auto !important; }
+
+        /* initial state for sections */
+        section {
+            opacity: 0;
+            transform: translateY(18px);
+            transition: opacity 560ms cubic-bezier(.2,.9,.3,1), transform 560ms cubic-bezier(.2,.9,.3,1);
+            will-change: opacity, transform;
+        }
+        section.section-visible {
+            opacity: 1;
+            transform: none;
+        }
+
+        /* Respect reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            section { transition: none !important; transform: none !important; opacity: 1 !important; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Reveal sections when they enter viewport (stagger naturally as user scrolls)
+    const sections = Array.from(document.querySelectorAll('section'));
+    if (prefersReduced) {
+        sections.forEach(s => s.classList.add('section-visible'));
+    } else {
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('section-visible');
+                }
+            });
+        }, { threshold: 0.35 });
+
+        sections.forEach(s => io.observe(s));
+    }
+
+    // Full-page scroll functionality
+    if (!prefersReduced) {
+        let isScrolling = false;
+        const scrollThreshold = 50; // Minimum scroll delta to trigger section change
+
+        function getCurrentSectionIndex() {
+            const scrollY = window.scrollY;
+            let currentIndex = 0;
+            sections.forEach((section, index) => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= window.innerHeight / 2) {
+                    currentIndex = index;
+                }
+            });
+            return currentIndex;
+        }
+
+        function scrollToSection(index) {
+            if (index < 0 || index >= sections.length || isScrolling) return;
+            isScrolling = true;
+            const target = sections[index];
+            const offset = target.getBoundingClientRect().top + window.scrollY - getHeaderOffset() - 12;
+            smoothScrollTo(offset, 800).then(() => {
+                isScrolling = false;
+                // Update URL hash
+                const id = target.id;
+                if (id) history.replaceState(null, '', `#${id}`);
+            });
+        }
+
+        let accumulatedDeltaY = 0;
+
+        window.addEventListener('wheel', (e) => {
+            if (isScrolling) {
+                e.preventDefault();
+                return;
+            }
+            accumulatedDeltaY += e.deltaY;
+            if (Math.abs(accumulatedDeltaY) > scrollThreshold) {
+                const direction = accumulatedDeltaY > 0 ? 1 : -1;
+                const currentIndex = getCurrentSectionIndex();
+                const nextIndex = currentIndex + direction;
+                if (nextIndex >= 0 && nextIndex < sections.length) {
+                    e.preventDefault();
+                    scrollToSection(nextIndex);
+                }
+                accumulatedDeltaY = 0;
+            }
+        }, { passive: false });
+
+        // Optional: Keyboard navigation (arrow keys)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const direction = e.key === 'ArrowDown' ? 1 : -1;
+                const currentIndex = getCurrentSectionIndex();
+                const nextIndex = currentIndex + direction;
+                scrollToSection(nextIndex);
+            }
+        });
+    }
+})();
