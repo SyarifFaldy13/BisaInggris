@@ -42,7 +42,20 @@
             if (!target) return;
             e.preventDefault();
             const offset = target.getBoundingClientRect().top + window.scrollY - getHeaderOffset() - 12;
+            if (prefersReduced) {
+                window.scrollTo(0, offset);
+                history.pushState(null, '', href);
+                return;
+            }
+            const startY = window.scrollY || window.pageYOffset;
+            const diff = offset - startY;
+            document.body.classList.add('scrolling');
+            document.body.classList.add(diff > 0 ? 'scrolling-down' : 'scrolling-up');
             smoothScrollTo(offset).then(() => {
+                // cleanup classes
+                document.body.classList.remove('scrolling', 'scrolling-down', 'scrolling-up');
+                document.body.classList.add('scrolling-done');
+                setTimeout(() => document.body.classList.remove('scrolling-done'), 350);
                 history.pushState(null, '', href);
             });
         });
@@ -78,14 +91,22 @@
             transform: none;
         }
 
-        /* Motion blur effect during scrolling */
+        /* Motion blur + directional slide effect during scrolling */
         body.scrolling {
             filter: blur(2px);
-            transition: filter 0.3s ease-in-out;
+            will-change: filter, transform;
+            transition: filter 0.35s cubic-bezier(.2,.9,.3,1), transform 0.35s cubic-bezier(.2,.9,.3,1);
+        }
+        body.scrolling-down {
+            transform: translateY(10px); /* subtle slide down while moving to lower section */
+        }
+        body.scrolling-up {
+            transform: translateY(-8px); /* subtle slide up while moving to upper section */
         }
         body.scrolling-done {
             filter: none;
-            transition: filter 0.3s ease-in-out;
+            transform: none;
+            transition: filter 0.35s cubic-bezier(.2,.9,.3,1), transform 0.35s cubic-bezier(.2,.9,.3,1);
         }
 
         /* Respect reduced motion */
@@ -132,14 +153,17 @@
         function scrollToSection(index) {
             if (index < 0 || index >= sections.length || isScrolling) return;
             isScrolling = true;
-            document.body.classList.add('scrolling'); // Add motion blur
             const target = sections[index];
             const offset = target.getBoundingClientRect().top + window.scrollY - getHeaderOffset() - 12;
+            const startY = window.scrollY || window.pageYOffset;
+            const diff = offset - startY;
+            document.body.classList.add('scrolling'); // Add motion blur
+            document.body.classList.add(diff > 0 ? 'scrolling-down' : 'scrolling-up');
             smoothScrollTo(offset, 800).then(() => {
                 isScrolling = false;
-                document.body.classList.remove('scrolling');
+                document.body.classList.remove('scrolling', 'scrolling-down', 'scrolling-up');
                 document.body.classList.add('scrolling-done'); // Smooth transition back
-                setTimeout(() => document.body.classList.remove('scrolling-done'), 300); // Remove after transition
+                setTimeout(() => document.body.classList.remove('scrolling-done'), 350); // Remove after transition
                 // Update URL hash
                 const id = target.id;
                 if (id) history.replaceState(null, '', `#${id}`);
